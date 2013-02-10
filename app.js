@@ -1,19 +1,4 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Notes
-////////////////////////////////////////////////////////////////////////////////
-
-//  Two parts:
-//      Part 1: Site scraper
-//          For each stub
-//          For each page
-//              If there are still pages, start fetch of next page
-//          For each kickstarter (if not seen)
-//          Get project page
-//          Index
-//      Part 2: RSS feed
-//          Order by date indexed followed by end date ascending
-
-////////////////////////////////////////////////////////////////////////////////
 // Modules
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -28,20 +13,20 @@ var sys = require('sys');
 // Config
 ////////////////////////////////////////////////////////////////////////////////
 
-var configFile = 'test.json';
-var testMode = true;
+var pageLimit = 30;
+var dataFile = 'projectsSeen.json';
+var outFile = 'ks2rss3.xml';
+var testMode = false;
 var basePath = 'http://www.kickstarter.com';
 var projectPrefix = 'http://www.kickstarter.com/projects/';
-var stubs = [
-    '/discover/recommended',
-    '/discover/recently-launched',
-    '/discover/ending-soon',
-    '/discover/small-projects',
-    '/discover/categories/art/popular',
-    '/discover/categories/art/recommended',
-    '/discover/categories/comics/popular',
-    '/discover/categories/comics/recommended',
-];
+var stubs = {
+    'Recommended': '/discover/recommended',
+    'Recently Launched': '/discover/recently-launched',
+    'Ending Soon': '/discover/ending-soon',
+    'Small Projects': '/discover/small-projects',
+    'Comics (Popular)': '/discover/categories/comics/popular',
+    'Comics (Recommended)': '/discover/categories/comics/recommended',
+};
 
 jsdom.defaultDocumentFeatures = {
     FetchExternalResources: [],
@@ -61,7 +46,7 @@ if( testMode ) {
                 fs.readFile( '.' + req.url , function( err , data ) {
                     if( err ) {
                         res.writeHead( 500 );
-                        res.end( err );
+                        res.end( String( err ) );
                     } else {
                         res.writeHead( 200 );
                         res.end( data );
@@ -74,9 +59,10 @@ if( testMode ) {
         } );
 
         basePath = 'http://localhost:8000/samples';
-        stubs = [
-            '/discover/ending-soon',
-        ];
+        stubs = {
+            'Recommended': '/discover/recommended',
+            'Ending Soon': '/discover/ending-soon',
+        };
     })();
 }
 
@@ -139,8 +125,10 @@ Page.prototype.fetchPage = function( url , callback ) {
 Page.prototype.fetch = function() {
     this.fullUrl = this.basePath + this.stub + '?page=' + this.page;
     this.fetchPage( this.fullUrl , function( err , data ) {
+        var parsedProjects = [];
         if( err ) {
             console.log( 'Error loading (' + this.fullUrl + '): ' + err );
+            this.emit( 'pageProjectsLoaded' , parsedProjects );
             return;
         }
 
@@ -151,9 +139,10 @@ Page.prototype.fetch = function() {
         var jq = jquery.create( window );
 
         var projectsJq = jq( 'li.project' );
-        var parsedProjects = [];
         projectsJq.each( function( index , item ) {
             var project = {};
+
+            project.seen = (new Date()).getTime();
 
             var projectLink = jq( 'h2 a' , item );
             if( projectLink.length ) {
@@ -200,8 +189,10 @@ Page.prototype.fetch = function() {
                 project.thumbnail = projectPhoto.prop( 'src' );
             }
 
-            parsedProjects.push( project );
-            this.projects.push( project );
+            if( project.url && project.name && project.thumbnail ) {
+                parsedProjects.push( project );
+                this.projects.push( project );
+            }
         }.bind( this ) );
 
         this.emit( 'pageProjectsLoaded' , parsedProjects );
@@ -212,37 +203,130 @@ Page.prototype.fetch = function() {
 // Main
 ////////////////////////////////////////////////////////////////////////////////
 
-var test = new Page();
-test.basePath = basePath;
-test.stub = stubs[0];
-test.page = 1;
-test.fetch();
-test.on( 'pageProjectsLoaded', function( projects ) {
-    if( projects.length ) {
-        test.page += 1;
-        test.fetch();
-    } else {
-        test.emit( 'allPagesLoaded' );
-    }
-} );
-test.on( 'allPagesLoaded' , function() {
-    console.log( test.projects.length );
-} );
+var pastData = JSON.parse( fs.readFileSync( dataFile ) );
+pastData = pastData || {};
+pastData.stubs = pastData.stubs || {};
+pastData.projectsByStub = pastData.projectsByStub || {};
 
-/*
-<rss version="2.0">
-  <channel>
-    <title>STUB_TITLE</title>
-    <link>STUB_LINK</link>
-    <description>STUB_DESCRIPTION</description>
-    <item>
-      <title>PROJECT_TITLE</title>
-      <link>PROJECT_LINK</link>
-      <enclosure url="THUMBNAIL_URL" length="BYTES" type="MIME_TYPE"></enclosure>
-      <pubDate>DATE</pubDate>
-    </item>
-    ...
-  </channel>
-  ...
-</rss>
-*/
+var channels = {};
+var stub;
+for( var stubName in stubs ) {
+    (function( stub , stubName ) {
+        var page = new Page();
+        page.basePath = basePath;
+        page.stub = stub;
+        page.page = 1;
+        page.fetch();
+        page.on( 'pageProjectsLoaded', function( projects ) {
+            console.log( stub + ' successfully parsed ' + projects.length + ' projects on page ' + page.page );
+            if( projects.length && page.page < pageLimit ) {
+                page.page += 1;
+                page.fetch();
+            } else {
+                page.emit( 'allPagesLoaded' );
+            }
+        } );
+        page.on( 'allPagesLoaded' , function() {
+            console.log( stub + ' successfully parsed ' + page.projects.length + ' projects' );
+            channels[stub] = page.projects;
+            if( allChannelsLoaded() ) {
+                produceXml();
+            }
+        } );
+        channels[stub] = null;
+    })( stubs[stubName] , stubName );
+}
+
+function allChannelsLoaded() {
+    for( var x in channels ) {
+        if( null === channels[x] ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function escapeXml( str ) {
+    // &#....;
+    return str.replace( /[^A-Za-z0-9 :;\/\\.?=!$%()*+,@\[\]^_{}"'-]/g, function( m ) {
+        return '&#x' + m.charCodeAt(0).toString(16).toUpperCase() + ';';
+    } );
+}
+
+function projectXml( project ) {
+    var d = new Date();
+    d.setTime( project.seen );
+
+    var xml = '    <item>\n';
+    xml += '      <title>' + escapeXml( project.name ) + '</title>\n';
+    xml += '      <guid>' + escapeXml( project.url ) + '</guid>\n';
+    xml += '      <link>' + escapeXml( project.url ) + '</link>\n';
+    xml += '      <description>' + escapeXml( '<a href="' + escapeXml( project.url ) + '">' + escapeXml( project.name ) + '</a><br /><a href="' + escapeXml( project.url ) + '"><img src="' + escapeXml( project.thumbnail ) + '" />' ) + '</description>\n';
+    xml += '      <pubDate>' + escapeXml( d.toString() ) + '</pubDate>\n';
+    xml += '    </item>\n';
+    return xml;
+}
+
+function produceXml() {
+    var xml = '<rss version="2.0">\n';
+    xml += '  <channel>\n';
+    xml += '    <title>KS2RSS</title>\n';
+    xml += '    <link>http://www.kickstarter.com</link>\n';
+    xml += '    <description></description>\n';
+
+    var stubName;
+    var stub;
+    var projectIndex;
+    var seen;
+    var project;
+    var newOnes = 0;
+    for( stubName in stubs ) {
+        stub = stubs[stubName];
+        seen = {}; // Reset for each stub
+
+        // Initialize containers/notes if not present
+        pastData.stubs[stubName] = stub;
+        pastData.projectsByStub[stub] = pastData.projectsByStub[stub] || [];
+
+        // Mark all the past projects as seen and re-add them to the XML
+        for( projectIndex = 0 ; projectIndex < pastData.projectsByStub[stub].length ; projectIndex ++ ) {
+            project = pastData.projectsByStub[stub][projectIndex];
+
+            // Mark as seen
+            seen[ project.url ] = true;
+
+            // Item XML
+            xml += projectXml( project );
+        }
+
+        for( projectIndex = 0 ; projectIndex < channels[stub].length ; projectIndex ++ ) {
+            project = channels[stub][projectIndex];
+
+            // If we've not seen this project before
+            if( ! seen[ project.url ] ) {
+                // Push the project onto the past list
+                pastData.projectsByStub[stub].push( project );
+
+                // Mark it seen
+                seen[ project.url ] = true;
+
+                // Item XML
+                xml += projectXml( project );
+
+                // Count it
+                newOnes += 1;
+            }
+        }
+
+        // Close XML
+    }
+    xml += '  </channel>\n';
+    xml += '</rss>\n';
+
+    fs.writeFileSync( outFile , xml );
+    fs.writeFileSync( dataFile , JSON.stringify( pastData ) );
+
+    console.log( 'New ones: ' + newOnes );
+    process.exit(0);
+}
