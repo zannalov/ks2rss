@@ -13,19 +13,42 @@ var sys = require('sys');
 // Config
 ////////////////////////////////////////////////////////////////////////////////
 
-var pageLimit = null;
+var pageLimit = null; // Max pages to load per stub
+var pagesInTandem = 15; // Remember, multiply this by the number of stubs below for true number of tandem connections
 var dataFile = 'projectsSeen5.json';
 var outFile = 'ks2rss5.xml';
 var testMode = false;
 var basePath = 'http://www.kickstarter.com';
 var projectPrefix = 'http://www.kickstarter.com/projects/';
 var stubs = {
-    //'Recommended': '/discover/recommended',
     'Recently Launched': '/discover/recently-launched',
     'Ending Soon': '/discover/ending-soon',
+    //'Recommended': '/discover/recommended',
     //'Small Projects': '/discover/small-projects',
     //'Comics (Popular)': '/discover/categories/comics/popular',
     //'Comics (Recommended)': '/discover/categories/comics/recommended',
+    //'Product Design (Popular)': '/discover/categories/product%20design/popular',
+    //'Product Design (Recommended)': '/discover/categories/product%20design/recommended',
+    //'Animation (Popular)': '/discover/categories/animation/popular',
+    //'Animation (Recommended)': '/discover/categories/animation/recommended',
+    //'Short Film (Popular)': '/discover/categories/short%20film/popular',
+    //'Short Film (Recommended)': '/discover/categories/short%20film/recommended',
+    //'Web Series (Popular)': '/discover/categories/webseries/popular',
+    //'Web Series (Recommended)': '/discover/categories/webseries/recommended',
+    //'Video Games (Popular)': '/discover/categories/video%20games/popular',
+    //'Video Games (Recommended)': '/discover/categories/video%20games/recommended',
+    //'Electronic Music (Popular)': '/discover/categories/electronic%20music/popular',
+    //'Electronic Music (Recommended)': '/discover/categories/electronic%20music/recommended',
+    //'Indie Rock (Popular)': '/discover/categories/indie%20rock/popular',
+    //'Indie Rock (Recommended)': '/discover/categories/indie%20rock/recommended',
+    //'Pop (Popular)': '/discover/categories/pop/popular',
+    //'Pop (Recommended)': '/discover/categories/pop/recommended',
+    //'Fiction (Popular)': '/discover/categories/fiction/popular',
+    //'Fiction (Recommended)': '/discover/categories/fiction/recommended',
+    //'Technology Hardware (Popular)': '/discover/categories/hardware/popular',
+    //'Technology Hardware (Recommended)': '/discover/categories/hardware/recommended',
+    //'Open Software (Popular)': '/discover/categories/open%20software/popular',
+    //'Open Software (Recommended)': '/discover/categories/open%20software/recommended',
 };
 
 jsdom.defaultDocumentFeatures = {
@@ -75,8 +98,11 @@ function Loader() {
     this.fetchPage = this.fetchPage.bind( this );
 
     this.projects = [];
+    this.pagesLoaded = {};
 
     events.EventEmitter.call( this );
+
+    this.on( 'pageProjectsLoaded', this.fetchNextPages );
 
     return this;
 }
@@ -84,8 +110,8 @@ sys.inherits( Loader , events.EventEmitter );
 
 Loader.prototype.basePath = null;
 Loader.prototype.stub = null;
-Loader.prototype.page = 1;
-Loader.prototype.rawResult = null;
+Loader.prototype.page = 0;
+Loader.prototype.pageProjectsCount = null;
 
 // url must be fully qualified
 // callback( err , data )
@@ -124,16 +150,16 @@ Loader.prototype.fetchPage = function( url , callback ) {
 
 Loader.prototype.fetch = function() {
     var page = this.page;
+    this.pagesLoaded[ page ] = false;
     this.fullUrl = this.basePath + this.stub + '?page=' + page;
     this.fetchPage( this.fullUrl , function( err , data ) {
         var parsedProjects = [];
+
         if( err ) {
             console.log( 'Error loading (' + this.fullUrl + '): ' + err );
             this.emit( 'pageProjectsLoaded' , parsedProjects , page );
             return;
         }
-
-        this.rawResult = data;
 
         var doc = jsdom.jsdom( data );
         var window = doc.createWindow();
@@ -209,8 +235,40 @@ Loader.prototype.fetch = function() {
             }
         }.bind( this ) );
 
+        //console.log( this.stub + ' page ' + page + ' loaded with ' + parsedProjects.length + ' projects' );
+        this.pagesLoaded[ page ] = true;
         this.emit( 'pageProjectsLoaded' , parsedProjects , page );
     }.bind( this ) );
+};
+
+Loader.prototype.fetchNextPages = function( parsedProjects , page ) {
+    var iterator;
+    var pageBatchEndsAt;
+
+    if( page == this.page ) {
+        this.pageProjectsCount = parsedProjects.length;
+    }
+
+    // If the current batch hasn't finished, skip it
+    for( iterator in this.pagesLoaded ) {
+        if( ! this.pagesLoaded[ iterator ] ) {
+            return;
+        }
+    }
+
+    if( this.page === pageLimit || ! this.pageProjectsCount ) {
+        this.emit( 'allPagesLoaded' );
+    }
+
+    pageBatchEndsAt = this.page + pagesInTandem;
+
+    if( this.pageProjectsCount && ( null === pageLimit || this.page < pageLimit ) ) {
+        while( ( this.page < pageBatchEndsAt ) && ( null === pageLimit || this.page < pageLimit ) )
+        {
+            this.page += 1;
+            this.fetch();
+        }
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -238,18 +296,8 @@ for( var stubName in stubs ) {
         loader.stub = stub;
         loader.page = 1;
         loader.fetch();
-        loader.on( 'pageProjectsLoaded', function( projects , pageLoaded ) {
-            if( pageLoaded == loader.page ) {
-                if( projects.length && ( null === pageLimit || loader.page < pageLimit ) ) {
-                    loader.page += 1;
-                    loader.fetch();
-                } else {
-                    loader.emit( 'allPagesLoaded' );
-                }
-            }
-        } );
         loader.on( 'allPagesLoaded' , function() {
-            console.log( stub + ' successfully parsed ' + loader.projects.length + ' projects' );
+            //console.log( stub + ' successfully parsed ' + loader.projects.length + ' projects' );
             channels[stub] = loader.projects;
             if( allChannelsLoaded() ) {
                 produceXml();
