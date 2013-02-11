@@ -2,6 +2,7 @@
 // Modules
 ////////////////////////////////////////////////////////////////////////////////
 
+var CONFIG = require( './config' );
 var events = require('events');
 var fs = require( 'fs' );
 var http = require( 'http' );
@@ -10,61 +11,13 @@ var jsdom = require('jsdom');
 var sys = require('sys');
 
 ////////////////////////////////////////////////////////////////////////////////
-// Config
-////////////////////////////////////////////////////////////////////////////////
-
-var pageLimit = null; // Max pages to load per stub
-var pagesInTandem = 15; // Remember, multiply this by the number of stubs below for true number of tandem connections
-var EXPIRE_THRESHOLD = ( 24 * 60 * 60 * 1000 ); // Milliseconds
-var dataFile = 'projectsSeen5.json';
-var outFile = 'ks2rss5.xml';
-var testMode = false;
-var basePath = 'http://www.kickstarter.com';
-var projectPrefix = 'http://www.kickstarter.com/projects/';
-var stubs = {
-    'Recently Launched': '/discover/recently-launched',
-    'Ending Soon': '/discover/ending-soon',
-    //'Recommended': '/discover/recommended',
-    //'Small Projects': '/discover/small-projects',
-    //'Comics (Popular)': '/discover/categories/comics/popular',
-    //'Comics (Recommended)': '/discover/categories/comics/recommended',
-    //'Product Design (Popular)': '/discover/categories/product%20design/popular',
-    //'Product Design (Recommended)': '/discover/categories/product%20design/recommended',
-    //'Animation (Popular)': '/discover/categories/animation/popular',
-    //'Animation (Recommended)': '/discover/categories/animation/recommended',
-    //'Short Film (Popular)': '/discover/categories/short%20film/popular',
-    //'Short Film (Recommended)': '/discover/categories/short%20film/recommended',
-    //'Web Series (Popular)': '/discover/categories/webseries/popular',
-    //'Web Series (Recommended)': '/discover/categories/webseries/recommended',
-    //'Video Games (Popular)': '/discover/categories/video%20games/popular',
-    //'Video Games (Recommended)': '/discover/categories/video%20games/recommended',
-    //'Electronic Music (Popular)': '/discover/categories/electronic%20music/popular',
-    //'Electronic Music (Recommended)': '/discover/categories/electronic%20music/recommended',
-    //'Indie Rock (Popular)': '/discover/categories/indie%20rock/popular',
-    //'Indie Rock (Recommended)': '/discover/categories/indie%20rock/recommended',
-    //'Pop (Popular)': '/discover/categories/pop/popular',
-    //'Pop (Recommended)': '/discover/categories/pop/recommended',
-    //'Fiction (Popular)': '/discover/categories/fiction/popular',
-    //'Fiction (Recommended)': '/discover/categories/fiction/recommended',
-    //'Technology Hardware (Popular)': '/discover/categories/hardware/popular',
-    //'Technology Hardware (Recommended)': '/discover/categories/hardware/recommended',
-    //'Open Software (Popular)': '/discover/categories/open%20software/popular',
-    //'Open Software (Recommended)': '/discover/categories/open%20software/recommended',
-};
-
-jsdom.defaultDocumentFeatures = {
-    FetchExternalResources: [],
-    ProcessExternalResources: false
-};
-
-////////////////////////////////////////////////////////////////////////////////
 // Debug code to serve sample files
 ////////////////////////////////////////////////////////////////////////////////
 
-if( testMode ) {
+if( CONFIG.TEST_MODE ) {
     (function(){
         var sampleServer = http.createServer();
-        sampleServer.listen( 8000 );
+        sampleServer.listen( CONFIG.TEST_LISTEN_PORT );
         sampleServer.on( 'request' , function( req , res ) {
             if( '/samples/' == req.url.substr( 0 , 9 ) ) {
                 fs.readFile( '.' + req.url , function( err , data ) {
@@ -81,12 +34,6 @@ if( testMode ) {
                 res.end( 'Bad request' );
             }
         } );
-
-        basePath = 'http://localhost:8000/samples';
-        stubs = {
-            'Recommended': '/discover/recommended',
-            'Ending Soon': '/discover/ending-soon',
-        };
     })();
 }
 
@@ -187,11 +134,11 @@ Loader.prototype.fetch = function() {
                     project.url = 'http' + project.url.substr( 5 );
                 }
 
-                if( project.url.substr( 0 , projectPrefix.length ) === projectPrefix ) {
+                if( project.url.substr( 0 , CONFIG.PROJECT_PREFIX.length ) === CONFIG.PROJECT_PREFIX ) {
                     var str = project.url;
 
                     // Strip off the prefix
-                    str = str.substr( projectPrefix.length );
+                    str = str.substr( CONFIG.PROJECT_PREFIX.length );
 
                     // Strip out query parameters
                     if( -1 !== str.indexOf( '?' ) ) {
@@ -257,14 +204,14 @@ Loader.prototype.fetchNextPages = function( parsedProjects , page ) {
         }
     }
 
-    if( this.page === pageLimit || ! this.pageProjectsCount ) {
+    if( this.page === CONFIG.PAGE_LIMIT || ! this.pageProjectsCount ) {
         this.emit( 'allPagesLoaded' );
     }
 
-    pageBatchEndsAt = this.page + pagesInTandem;
+    pageBatchEndsAt = this.page + CONFIG.PAGES_IN_TANDEM;
 
-    if( this.pageProjectsCount && ( null === pageLimit || this.page < pageLimit ) ) {
-        while( ( this.page < pageBatchEndsAt ) && ( null === pageLimit || this.page < pageLimit ) )
+    if( this.pageProjectsCount && ( null === CONFIG.PAGE_LIMIT || this.page < CONFIG.PAGE_LIMIT ) ) {
+        while( ( this.page < pageBatchEndsAt ) && ( null === CONFIG.PAGE_LIMIT || this.page < CONFIG.PAGE_LIMIT ) )
         {
             this.page += 1;
             this.fetch();
@@ -276,10 +223,15 @@ Loader.prototype.fetchNextPages = function( parsedProjects , page ) {
 // Main
 ////////////////////////////////////////////////////////////////////////////////
 
+jsdom.defaultDocumentFeatures = {
+    FetchExternalResources: [],
+    ProcessExternalResources: false
+};
+
 var pastData;
 
 try {
-    pastData = JSON.parse( fs.readFileSync( dataFile ) );
+    pastData = JSON.parse( fs.readFileSync( CONFIG.DATA_FILE ) );
 } catch( e ) {
     pastData = {};
 }
@@ -290,10 +242,10 @@ pastData.projectsByUrl = pastData.projectsByUrl || {};
 
 var channels = {};
 var stub;
-for( var stubName in stubs ) {
+for( var stubName in CONFIG.STUBS ) {
     (function( stub , stubName ) {
         var loader = new Loader();
-        loader.basePath = basePath;
+        loader.basePath = CONFIG.BASE_PATH;
         loader.stub = stub;
         loader.page = 1;
         loader.fetch();
@@ -305,7 +257,7 @@ for( var stubName in stubs ) {
             }
         } );
         channels[stub] = null;
-    })( stubs[stubName] , stubName );
+    })( CONFIG.STUBS[stubName] , stubName );
 }
 
 function allChannelsLoaded() {
@@ -326,9 +278,9 @@ function escapeXml( str ) {
 }
 
 function projectXml( project ) {
-    // If the project was first seen over EXPIRE_THRESHOLD ago, don't
+    // If the project was first seen over CONFIG.EXPIRE_THRESHOLD ago, don't
     // generate the item XML
-    if( project.seen < Date.now() - EXPIRE_THRESHOLD ) {
+    if( project.seen < Date.now() - CONFIG.EXPIRE_THRESHOLD ) {
         return '';
     }
 
@@ -371,17 +323,25 @@ function produceXml() {
     // For each stub
     totalOnes = 0;
     newOnes = 0;
-    for( stubName in stubs ) {
-        stub = stubs[stubName];
+    for( stubName in CONFIG.STUBS ) {
+        stub = CONFIG.STUBS[stubName];
 
         // Initialize containers/notes if not present
         pastData.stubs[stubName] = stub;
+
+        // Mark all projects as inactive
+        for( projectIndex in pastData.projectsByUrl ) {
+            pastData.projectsByUrl[ projectIndex ].active = false;
+        }
 
         // For each project for this stub
         for( projectIndex = 0 ; projectIndex < channels[stub].length ; projectIndex ++ ) {
             project = channels[stub][projectIndex];
 
             if( pastData.projectsByUrl[ project.url ] ) { // If we've seen this project before
+                // Mark active
+                pastData.projectsByUrl[ projectIndex ].active = true;
+
                 // Item XML
                 xml += projectXml( pastData.projectsByUrl[ project.url ] );
             } else { // If we've not seen this project before
@@ -389,6 +349,9 @@ function produceXml() {
 
                 // Push the project onto the past list
                 pastData.projectsByUrl[ project.url ] = project;
+
+                // Mark active
+                pastData.projectsByUrl[ projectIndex ].active = true;
 
                 // Item XML
                 xml += projectXml( project );
@@ -407,7 +370,7 @@ function produceXml() {
     xml += '</rss>\n';
 
     // Write results
-    fs.writeFileSync( outFile , xml );
+    fs.writeFileSync( CONFIG.OUT_FILE , xml );
     fs.writeFileSync( dataFile , JSON.stringify( pastData , null , '\t' ) );
 
     // Exit cleanly
