@@ -15,6 +15,7 @@ var sys = require('sys');
 
 var pageLimit = null; // Max pages to load per stub
 var pagesInTandem = 15; // Remember, multiply this by the number of stubs below for true number of tandem connections
+var EXPIRE_THRESHOLD = ( 24 * 60 * 60 * 1000 ); // Milliseconds
 var dataFile = 'projectsSeen5.json';
 var outFile = 'ks2rss5.xml';
 var testMode = false;
@@ -229,7 +230,7 @@ Loader.prototype.fetch = function() {
 
             project.blurb = jq( '.bbcard_blurb' , item ).text();
 
-            if( project.url && project.name && project.thumbnail ) {
+            if( project.url && project.name && project.thumbnail && project.blurb ) {
                 parsedProjects.push( project );
                 this.projects.push( project );
             }
@@ -325,11 +326,17 @@ function escapeXml( str ) {
 }
 
 function projectXml( project ) {
+    // If the project was first seen over EXPIRE_THRESHOLD ago, don't
+    // generate the item XML
+    if( project.seen < Date.now() - EXPIRE_THRESHOLD ) {
+        return '';
+    }
+
     var d = new Date();
     d.setTime( project.seen );
 
     var xml = '    <item>\n';
-    xml += '      <title>' + escapeXml( project.name ) + '</title>\n';
+    xml += '      <title>Kickstarter: ' + escapeXml( project.name ) + '</title>\n';
     xml += '      <guid>' + escapeXml( project.url ) + '</guid>\n';
     xml += '      <link>' + escapeXml( project.url ) + '</link>\n';
     xml += '      <description>' + escapeXml(
@@ -339,13 +346,14 @@ function projectXml( project ) {
         + '<br />'
         + escapeXml( project.blurb ) + '<br />'
     ) + '</description>\n';
-    xml += '      <pubDate>' + escapeXml( d.toString() ) + '</pubDate>\n';
+    xml += '      <pubDate>' + escapeXml( d.toISOString() ) + '</pubDate>\n';
     xml += '    </item>\n';
 
     return xml;
 }
 
 function produceXml() {
+    var totalOnes;
     var newOnes;
     var project;
     var projectIndex;
@@ -361,9 +369,13 @@ function produceXml() {
     xml += '    <description></description>\n';
 
     // Mark all the past projects as seen and re-add them to the XML
+    totalOnes = 0;
     for( projectIndex in pastData.projectsByUrl ) {
         // Item XML
         xml += projectXml( pastData.projectsByUrl[ projectIndex ] );
+
+        // Count it
+        totalOnes += 1;
     }
 
     // For each stub
@@ -390,6 +402,7 @@ function produceXml() {
 
                 // Count it
                 newOnes += 1;
+                totalOnes += 1;
             }
         }
     }
@@ -403,6 +416,9 @@ function produceXml() {
     fs.writeFileSync( dataFile , JSON.stringify( pastData , null , '\t' ) );
 
     // Exit cleanly
-    console.log( 'New ones: ' + newOnes );
+    if( newOnes ) {
+        console.log( 'New projects this round: ' + newOnes );
+        console.log( 'Total projects: ' + totalOnes );
+    }
     process.exit(0);
 }
