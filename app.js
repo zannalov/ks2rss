@@ -228,17 +228,17 @@ jsdom.defaultDocumentFeatures = {
     ProcessExternalResources: false
 };
 
-var pastData;
+var data;
 
 try {
-    pastData = JSON.parse( fs.readFileSync( CONFIG.DATA_FILE ) );
+    data = JSON.parse( fs.readFileSync( CONFIG.DATA_FILE ) );
 } catch( e ) {
-    pastData = {};
+    data = {};
 }
 
-pastData = pastData || {};
-pastData.stubs = pastData.stubs || {};
-pastData.projectsByUrl = pastData.projectsByUrl || {};
+data = data || {};
+data.stubs = data.stubs || {};
+data.projectsByUrl = data.projectsByUrl || {};
 
 var channels = {};
 var stub;
@@ -301,6 +301,8 @@ function projectXml( project ) {
     xml += '      <pubDate>' + escapeXml( d.toISOString() ) + '</pubDate>\n';
     xml += '    </item>\n';
 
+    project.exported = true;
+
     return xml;
 }
 
@@ -320,6 +322,12 @@ function produceXml() {
     xml += '    <link>http://www.kickstarter.com</link>\n';
     xml += '    <description></description>\n';
 
+    // Mark all projects as inactive
+    for( projectIndex in data.projectsByUrl ) {
+        data.projectsByUrl[ projectIndex ].active = false;
+        data.projectsByUrl[ projectIndex ].exported = false;
+    }
+
     // For each stub
     totalOnes = 0;
     newOnes = 0;
@@ -327,31 +335,20 @@ function produceXml() {
         stub = CONFIG.STUBS[stubName];
 
         // Initialize containers/notes if not present
-        pastData.stubs[stubName] = stub;
-
-        // Mark all projects as inactive
-        for( projectIndex in pastData.projectsByUrl ) {
-            pastData.projectsByUrl[ projectIndex ].active = false;
-        }
+        data.stubs[stubName] = stub;
 
         // For each project for this stub
         for( projectIndex = 0 ; projectIndex < channels[stub].length ; projectIndex ++ ) {
             project = channels[stub][projectIndex];
 
-            if( pastData.projectsByUrl[ project.url ] ) { // If we've seen this project before
-                // Mark active
-                pastData.projectsByUrl[ projectIndex ].active = true;
-
+            if( data.projectsByUrl[ project.url ] ) { // If we've seen this project before
                 // Item XML
-                xml += projectXml( pastData.projectsByUrl[ project.url ] );
+                xml += projectXml( data.projectsByUrl[ project.url ] );
             } else { // If we've not seen this project before
                 console.log( 'New one: ' + project.name.replace( /\n.*/ , '' ).replace( /^\s+/ , '' ).replace( /\s+$/ , '' ) );
 
                 // Push the project onto the past list
-                pastData.projectsByUrl[ project.url ] = project;
-
-                // Mark active
-                pastData.projectsByUrl[ projectIndex ].active = true;
+                data.projectsByUrl[ project.url ] = project;
 
                 // Item XML
                 xml += projectXml( project );
@@ -359,6 +356,9 @@ function produceXml() {
                 // Count it
                 newOnes += 1;
             }
+
+            // Mark active
+            data.projectsByUrl[ project.url ].active = true;
 
             // Count it
             totalOnes += 1;
@@ -371,7 +371,7 @@ function produceXml() {
 
     // Write results
     fs.writeFileSync( CONFIG.OUT_FILE , xml );
-    fs.writeFileSync( dataFile , JSON.stringify( pastData , null , '\t' ) );
+    fs.writeFileSync( CONFIG.DATA_FILE , JSON.stringify( data , null , '\t' ) );
 
     // Exit cleanly
     if( newOnes ) {

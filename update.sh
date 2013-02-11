@@ -1,5 +1,10 @@
 #!/bin/bash
 
-cd $( dirname "$BASH_SOURCE" )
-node app || { echo "Exit code: $?"; exit 1; }
-mv ks2rss5.xml /var/www/zannalov.com/
+DIR=$( dirname "$BASH_SOURCE" )""
+LOGFILE="log.txt"
+
+cd "$DIR"
+echo -n "Started: " >>"$LOGFILE" ; date >>"$LOGFILE"
+node app >>"$LOGFILE" || { echo "Exit code: $?"; exit 1; }
+mv -v ks2rss5.xml /var/www/zannalov.com/ >>"$LOGFILE"
+echo -n "Finished: " >>"$LOGFILE" ; date >>"$LOGFILE"

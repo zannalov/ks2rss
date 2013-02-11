@@ -5,11 +5,12 @@
     var CONFIG;
     var countActive;
     var countProjectsExpired;
+    var countProjectsExported;
     var countProjectsSeen;
     var countStubs;
+    var data;
     var fs;
     var iterator;
-    var pastData;
     var project;
 
     // Load modules
@@ -17,27 +18,32 @@
     fs = require( 'fs' );
 
     // Load data
-    pastData = JSON.parse( fs.readFileSync( CONFIG.DATA_FILE ) );
+    data = JSON.parse( fs.readFileSync( CONFIG.DATA_FILE ) );
 
     // Zero counts
     countActive =
     countProjectsExpired =
+    countProjectsExported =
     countProjectsSeen =
     countStubs =
     0;
 
     // Count stubs
-    for( iterator in pastData.countStubs ) {
+    for( iterator in data.stubs ) {
         countStubs += 1;
     }
 
     // Count projects
-    for( iterator in pastData.projectsByUrl ) {
-        project = pastData.projectsByUrl[ iterator ];
+    for( iterator in data.projectsByUrl ) {
+        project = data.projectsByUrl[ iterator ];
         countProjectsSeen += 1;
 
         if( project.seen < Date.now() - CONFIG.EXPIRE_THRESHOLD ) {
             countProjectsExpired += 1;
+        }
+
+        if( project.exported ) {
+            countProjectsExported += 1;
         }
 
         if( project.active ) {
@@ -49,4 +55,5 @@
     console.log( 'Projects seen: ' + countProjectsSeen );
     console.log( 'Projects expired: ' + countProjectsExpired );
     console.log( 'Projects in last fetch (active): ' + countActive );
+    console.log( 'Projects exported (active - expired): ' + countProjectsExported );
 })();
