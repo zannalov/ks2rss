@@ -368,17 +368,8 @@ function produceXml() {
     xml += '    <link>http://www.kickstarter.com</link>\n';
     xml += '    <description></description>\n';
 
-    // Mark all the past projects as seen and re-add them to the XML
-    totalOnes = 0;
-    for( projectIndex in pastData.projectsByUrl ) {
-        // Item XML
-        xml += projectXml( pastData.projectsByUrl[ projectIndex ] );
-
-        // Count it
-        totalOnes += 1;
-    }
-
     // For each stub
+    totalOnes = 0;
     newOnes = 0;
     for( stubName in stubs ) {
         stub = stubs[stubName];
@@ -390,8 +381,10 @@ function produceXml() {
         for( projectIndex = 0 ; projectIndex < channels[stub].length ; projectIndex ++ ) {
             project = channels[stub][projectIndex];
 
-            // If we've not seen this project before
-            if( ! pastData.projectsByUrl[ project.url ] ) {
+            if( pastData.projectsByUrl[ project.url ] ) { // If we've seen this project before
+                // Item XML
+                xml += projectXml( pastData.projectsByUrl[ project.url ] );
+            } else { // If we've not seen this project before
                 console.log( 'New one: ' + project.name.replace( /\n.*/ , '' ).replace( /^\s+/ , '' ).replace( /\s+$/ , '' ) );
 
                 // Push the project onto the past list
@@ -402,8 +395,10 @@ function produceXml() {
 
                 // Count it
                 newOnes += 1;
-                totalOnes += 1;
             }
+
+            // Count it
+            totalOnes += 1;
         }
     }
 
