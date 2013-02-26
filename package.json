@@ -1,18 +1,11 @@
 {
   "name": "ks2rss",
-  "version": "0.0.0",
-  "description": "ERROR: No README.md file found!",
+  "version": "1.0.0",
+  "description": "Kickstarter to RSS site scraper",
   "main": "app.js",
   "dependencies": {
     "jsdom": "*",
     "jquery": "*"
   },
-  "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": "",
-  "author": "",
-  "license": "BSD",
-  "gitHead": "1ccf54b79daac1c8ca3b13085fd623e6ef2f9f89"
+  "license": "WTFPL"
 }
