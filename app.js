@@ -134,6 +134,11 @@ Loader.prototype.fetch = function() {
                     project.url = 'http' + project.url.substr( 5 );
                 }
 
+                // If jQuery turned it into a local file URL
+                if( 'file://' === project.url.substr( 0 , 7 ) ) {
+                    project.url = 'http://www.kickstarter.com' + project.url.substr( 7 );
+                }
+
                 if( project.url.substr( 0 , CONFIG.PROJECT_PREFIX.length ) === CONFIG.PROJECT_PREFIX ) {
                     var str = project.url;
 
