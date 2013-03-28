@@ -2,7 +2,7 @@
 // Modules
 ////////////////////////////////////////////////////////////////////////////////
 
-var CONFIG = require( './config' );
+var CONFIG = require( process.argv[2] || './config' );
 var events = require('events');
 var fs = require( 'fs' );
 var http = require( 'http' );
@@ -105,7 +105,7 @@ Loader.prototype.fetch = function() {
 
         if( err ) {
             console.log( 'Error loading (' + this.fullUrl + '): ' + err );
-            this.emit( 'pageProjectsLoaded' , parsedProjects , page );
+            process.exit(1);
             return;
         }
 
@@ -132,6 +132,11 @@ Loader.prototype.fetch = function() {
                 // Convert https to http
                 if( 'https' === project.url.substr( 0 , 5 ) ) {
                     project.url = 'http' + project.url.substr( 5 );
+                }
+
+                // If jQuery turned it into a local file URL
+                if( 'file://' === project.url.substr( 0 , 7 ) ) {
+                    project.url = 'http://www.kickstarter.com' + project.url.substr( 7 );
                 }
 
                 if( project.url.substr( 0 , CONFIG.PROJECT_PREFIX.length ) === CONFIG.PROJECT_PREFIX ) {
