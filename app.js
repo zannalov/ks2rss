@@ -2,7 +2,7 @@
 // Modules
 ////////////////////////////////////////////////////////////////////////////////
 
-var CONFIG = require( './config' );
+var CONFIG = require( process.argv[2] || './config' );
 var events = require('events');
 var fs = require( 'fs' );
 var http = require( 'http' );
@@ -105,7 +105,7 @@ Loader.prototype.fetch = function() {
 
         if( err ) {
             console.log( 'Error loading (' + this.fullUrl + '): ' + err );
-            this.emit( 'pageProjectsLoaded' , parsedProjects , page );
+            process.exit(1);
             return;
         }
 
