@@ -98,13 +98,27 @@ Loader.prototype.fetchPage = function( url , callback ) {
 
 Loader.prototype.fetch = function() {
     var page = this.page;
+    var fullUrl = this.basePath + this.stub + '?page=' + page;
+
     this.pagesLoaded[ page ] = false;
-    this.fullUrl = this.basePath + this.stub + '?page=' + page;
-    this.fetchPage( this.fullUrl , function( err , data ) {
+
+    var attemptNumber = 0;
+    var callback = function( err , data ) {
         var parsedProjects = [];
 
+        attemptNumber += 1;
+
         if( err ) {
-            console.log( 'Error loading (' + this.fullUrl + '): ' + err );
+            console.log( 'Error loading (' + fullUrl + ') attempt #' + attemptNumber + ': ' + err );
+
+            if( attemptNumber < CONFIG.ATTEMPTS_PER_PAGE ) {
+                setTimeout( function() {
+                    this.fetchPage( fullUrl , callback );
+                }.bind( this ) , CONFIG.RETRY_DELAY );
+
+                return;
+            }
+
             process.exit(1);
             return;
         }
@@ -191,7 +205,9 @@ Loader.prototype.fetch = function() {
         //console.log( this.stub + ' page ' + page + ' loaded with ' + parsedProjects.length + ' projects' );
         this.pagesLoaded[ page ] = true;
         this.emit( 'pageProjectsLoaded' , parsedProjects , page );
-    }.bind( this ) );
+    }.bind( this );
+
+    this.fetchPage( fullUrl , callback );
 };
 
 Loader.prototype.fetchNextPages = function( parsedProjects , page ) {
