@@ -38,6 +38,7 @@ exports.STUBS = {
     //'Open Software (Popular)': '/discover/categories/open%20software/popular',
     //'Open Software (Recommended)': '/discover/categories/open%20software/recommended',
 };
+exports.TITLE_PREFIX = 'Kickstarter: ';
 
 if( exports.TEST_MODE ) {
     exports.TEST_LISTEN_PORT = 8000;

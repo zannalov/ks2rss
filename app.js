@@ -309,7 +309,7 @@ function projectXml( project ) {
     d.setTime( project.seen );
 
     var xml = '    <item>\n';
-    xml += '      <title>Kickstarter: ' + escapeXml( project.name ) + '</title>\n';
+    xml += '      <title>' + CONFIG.TITLE_PREFIX + escapeXml( project.name ) + '</title>\n';
     xml += '      <guid>' + escapeXml( project.url ) + '</guid>\n';
     xml += '      <link>' + escapeXml( project.url ) + '</link>\n';
     xml += '      <description>' + escapeXml(
