@@ -11,4 +11,4 @@ exports.PROJECT_PREFIX = 'http://www.kickstarter.com/projects/';
 exports.STUBS = {
     'Recently Launched': '/discover/recently-launched',
 };
-exports.TITLE_PREFIX = 'Kickstarter: Recently Launched: ';
+exports.TITLE_PREFIX = 'Kickstarter (New): ';

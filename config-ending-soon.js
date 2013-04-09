@@ -11,4 +11,4 @@ exports.PROJECT_PREFIX = 'http://www.kickstarter.com/projects/';
 exports.STUBS = {
     'Ending Soon': '/discover/ending-soon',
 };
-exports.TITLE_PREFIX = 'Kickstarter: Ending Soon: ';
+exports.TITLE_PREFIX = 'Kickstarter (Ending Soon): ';

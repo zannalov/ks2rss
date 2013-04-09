@@ -3,6 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 var CONFIG = require( process.argv[2] || './config' );
+var VERSION = 2;
 var events = require('events');
 var fs = require( 'fs' );
 var http = require( 'http' );
@@ -131,6 +132,7 @@ Loader.prototype.fetch = function() {
         projectsJq.each( function( index , item ) {
             var project = {};
 
+            project.version = VERSION;
             project.seen = (new Date()).getTime();
 
             var projectLink = jq( 'h2 a' , item );
@@ -302,6 +304,12 @@ function projectXml( project ) {
     // If the project was first seen over CONFIG.EXPIRE_THRESHOLD ago, don't
     // generate the item XML
     if( project.seen < Date.now() - CONFIG.EXPIRE_THRESHOLD ) {
+        return '';
+    }
+
+    // If the project version doesn't match the software version, then we've
+    // changed something and this old data shouldn't be shown/included
+    if( project.version != VERSION ) {
         return '';
     }
 
