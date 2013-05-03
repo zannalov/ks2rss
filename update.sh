@@ -6,7 +6,7 @@ LOGFILE="log.txt"
 cd "$DIR"
 
 echo -n "Started: " >>"$LOGFILE" ; date >>"$LOGFILE"
-for c in recently-launched ending-soon ; do
+for c in recently-launched ending-soon indianapolis ; do
     echo "Config: $c" >>"$LOGFILE"
     node app ./config-$c >>"$LOGFILE" ; exit_code=$?
     echo "Exit code: $exit_code" >>"$LOGFILE"

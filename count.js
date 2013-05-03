@@ -14,7 +14,7 @@
     var project;
 
     // Load modules
-    CONFIG = require( './config' );
+    CONFIG = require( process.argv[2] || './config' );
     fs = require( 'fs' );
 
     // Load data
