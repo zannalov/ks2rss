@@ -6,7 +6,8 @@
   "dependencies": {
     "jsdom": "*",
     "jquery": "*",
-    "ch": "*"
+    "ch": "*",
+    "promised-io": "*"
   },
   "license": "WTFPL"
 }
