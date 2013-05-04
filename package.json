@@ -1,11 +1,12 @@
 {
   "name": "ks2rss",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Kickstarter to RSS site scraper",
   "main": "app.js",
   "dependencies": {
     "jsdom": "*",
-    "jquery": "*"
+    "jquery": "*",
+    "ch": "*"
   },
   "license": "WTFPL"
 }
