@@ -7,63 +7,6 @@ var fs = require( 'fs' );
 var VERSION = JSON.parse( fs.readFileSync( 'package.json' ) ).version;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Stub loader
-////////////////////////////////////////////////////////////////////////////////
-
-function Loader() {
-    this.fetch = this.fetch.bind( this );
-    this.fetchPage = this.fetchPage.bind( this );
-
-    this.projects = [];
-    this.pagesLoaded = {};
-
-    this.on( 'pageProjectsLoaded', this.fetchNextPages );
-
-    return this;
-}
-
-Loader.prototype.basePath = null;
-Loader.prototype.stub = null;
-Loader.prototype.page = 0;
-Loader.prototype.pageProjectsCount = null;
-
-Loader.prototype.fetchNextPages = function( parsedProjects , page ) {
-    var iterator;
-    var pageBatchEndsAt;
-
-    if( page == this.page ) {
-        this.pageProjectsCount = parsedProjects.length;
-    }
-
-    // If the current batch hasn't finished, skip it
-    for( iterator in this.pagesLoaded ) {
-        if( ! this.pagesLoaded[ iterator ] ) {
-            return;
-        }
-    }
-
-    if( this.page === CONFIG.PAGE_LIMIT || ! this.pageProjectsCount ) {
-        this.emit( 'allPagesLoaded' );
-    }
-
-    pageBatchEndsAt = this.page + CONFIG.PAGES_IN_TANDEM;
-
-    if( this.pageProjectsCount && ( null === CONFIG.PAGE_LIMIT || this.page < CONFIG.PAGE_LIMIT ) ) {
-        while( ( this.page < pageBatchEndsAt ) && ( null === CONFIG.PAGE_LIMIT || this.page < CONFIG.PAGE_LIMIT ) )
-        {
-            this.page += 1;
-            this.fetch();
-        }
-    }
-};
-
-
-
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////
 
