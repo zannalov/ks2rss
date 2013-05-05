@@ -1,8 +1,3 @@
-// TODO: Parity:
-    // TODO: Configuration loading
-    // TODO: Before program exits
-        // TODO: Author new XML feed
-        // TODO: RSS post details should have blurb, then <hr>, then full content area
 // TODO: PubSubHubbub integration?
 
 var STARTED = Date.now();
