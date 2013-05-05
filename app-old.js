@@ -1,57 +1,3 @@
-////////////////////////////////////////////////////////////////////////////////
-// Modules
-////////////////////////////////////////////////////////////////////////////////
-
-var CONFIG = require( process.argv[2] || './config' );
-var fs = require( 'fs' );
-var VERSION = JSON.parse( fs.readFileSync( 'package.json' ) ).version;
-
-////////////////////////////////////////////////////////////////////////////////
-// Main
-////////////////////////////////////////////////////////////////////////////////
-
-var data;
-
-try {
-    data = JSON.parse( fs.readFileSync( CONFIG.DATA_FILE ) );
-} catch( e ) {
-    data = {};
-}
-
-data = data || {};
-data.stubs = data.stubs || {};
-data.projectsByUrl = data.projectsByUrl || {};
-
-var channels = {};
-var stub;
-for( var stubName in CONFIG.STUBS ) {
-    (function( stub , stubName ) {
-        var loader = new Loader();
-        loader.basePath = CONFIG.BASE_PATH;
-        loader.stub = stub;
-        loader.page = 1;
-        loader.fetch();
-        loader.on( 'allPagesLoaded' , function() {
-            //console.log( stub + ' successfully parsed ' + loader.projects.length + ' projects' );
-            channels[stub] = loader.projects;
-            if( allChannelsLoaded() ) {
-                produceXml();
-            }
-        } );
-        channels[stub] = null;
-    })( CONFIG.STUBS[stubName] , stubName );
-}
-
-function allChannelsLoaded() {
-    for( var x in channels ) {
-        if( null === channels[x] ) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 function escapeXml( str ) {
     // &#....;
     return str.replace( /[^A-Za-z0-9 :;\/\\.?=!$%()*+,@\[\]^_{}"'-]/g, function( m ) {
@@ -76,17 +22,17 @@ function projectXml( project ) {
     d.setTime( project.seen );
 
     var xml = '    <item>\n';
-    xml += '      <title>' + CONFIG.TITLE_PREFIX + escapeXml( project.name ) + '</title>\n';
-    xml += '      <guid>' + escapeXml( project.url ) + '</guid>\n';
-    xml += '      <link>' + escapeXml( project.url ) + '</link>\n';
-    xml += '      <description>' + escapeXml(
-        '<a href="' + escapeXml( project.url ) + '"><img src="' + escapeXml( project.thumbnail ) + '" /><br />'
-        + '<a href="' + escapeXml( project.url ) + '">' + escapeXml( project.name ) + '</a><br />'
-        + 'By ' + escapeXml( project.author ) + '</a><br />'
+    xml += '      <title>' + CONFIG.TITLE_PREFIX + utils.escapeXml( project.name ) + '</title>\n';
+    xml += '      <guid>' + utils.escapeXml( project.url ) + '</guid>\n';
+    xml += '      <link>' + utils.escapeXml( project.url ) + '</link>\n';
+    xml += '      <description>' + utils.escapeXml(
+        '<a href="' + utils.escapeXml( project.url ) + '"><img src="' + utils.escapeXml( project.thumbnail ) + '" /><br />'
+        + '<a href="' + utils.escapeXml( project.url ) + '">' + utils.escapeXml( project.name ) + '</a><br />'
+        + 'By ' + utils.escapeXml( project.author ) + '</a><br />'
         + '<br />'
-        + escapeXml( project.blurb ) + '<br />'
+        + utils.escapeXml( project.blurb ) + '<br />'
     ) + '</description>\n';
-    xml += '      <pubDate>' + escapeXml( d.toISOString() ) + '</pubDate>\n';
+    xml += '      <pubDate>' + utils.escapeXml( d.toISOString() ) + '</pubDate>\n';
     xml += '    </item>\n';
 
     project.exported = true;
@@ -159,7 +105,6 @@ function produceXml() {
 
     // Write results
     fs.writeFileSync( CONFIG.OUT_FILE , xml );
-    fs.writeFileSync( CONFIG.DATA_FILE , JSON.stringify( data , null , '\t' ) );
 
     // Exit cleanly
     if( newOnes ) {
