@@ -8,6 +8,7 @@ var projectDb = require( './lib/projectDb' );
 var projectRss = require( './lib/projectRss' );
 var runtimeConfig = require('configure');
 var SEEN_THRESHOLD;
+var trulyNewProjectCount = 0;
 
 // Note our start and end times
 // console.log( 'KS2RSS Started: ' + STARTED );
@@ -87,6 +88,9 @@ projectDb.openDb( function() {
 
                 // Otherwise if we've not seen it before
                 } else {
+
+                    // Count the shiny new project
+                    trulyNewProjectCount += 1;
 
                     // Fetch the details of the project
                     fetch.fetchProjectDetails( {
