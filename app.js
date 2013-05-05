@@ -103,7 +103,7 @@ projectDb.openDb( function() {
                             // Store entry
                             projectDb.addProjectEntry( project , function() {
 
-                                markSeenAndAccept( project , eachProjectLoadedCallback , false );
+                                markSeenAndAccept( project , eachProjectLoadedCallback , true );
 
                             } );
                         },

@@ -2,6 +2,7 @@
 *.xml
 .*.swp
 .swp
+*.sqlite
 /log.txt
 /node_modules/
 /samples/
