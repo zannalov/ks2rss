@@ -7,7 +7,7 @@ var url = 'http://www.kickstarter.com/discover/recently-launched?ref=sidebar';
 fetchPage({
     url: url,
     maxAttempts: 1,
-    extCallback: function( err , body ) {
+    extCallback: function( err , body , mimetype ) {
         if( !err ) {
             var projects = parseProjectListPage( url , body );
             console.log( projects );
@@ -16,21 +16,30 @@ fetchPage({
 });
 */
 
-var Fetch = require( './lib/fetch' );
+var fetch = require( './lib/fetch' );
 var ch = require('ch').ch;
 
 ch.setMax( 256 );
 
-Fetch.fetchAllProjectListPages( {
+fetch.fetchAllProjectListPages( {
     urlTemplate: 'http://www.kickstarter.com/discover/recently-launched?ref=sidebar&page=%%page%%',
 
     eachProjectLoaded: function( project , callback ) {
-        // console.log( 'project fully loaded:' );
-        // console.log( project );
-        // console.log( '' );
+        // TODO: If project already seen, load old copy, possibly skip
+        fetch.fetchProjectDetails( {
+            project: project,
+            callback: function() {
+                console.log( 'project fully loaded:' );
+                console.log( project );
+                console.log( '' );
 
-        // Randomly choose to keep/discard each project
-        callback( Boolean( Math.round( Math.random() ) ) );
+                // Randomly choose to keep/discard each project
+                // callback( Boolean( Math.round( Math.random() ) ) );
+
+                // Accept all projects
+                callback( true );
+            },
+        } );
     },
 
     allProjectsLoaded: function( projects ) {
