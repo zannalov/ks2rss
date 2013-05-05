@@ -14,8 +14,11 @@ var projectRss = require( './lib/projectRss' );
 var runtimeConfig = require('configure');
 var SEEN_THRESHOLD;
 
-// Note our start time
-console.log( 'KS2RSS Started: ' + STARTED );
+// Note our start and end times
+// console.log( 'KS2RSS Started: ' + STARTED );
+process.on( 'exit' , function() {
+    // console.log( 'KS2RSS Finished: ' + Date.now() );
+} );
 
 // We have to have a config file for the URL format
 if( ! runtimeConfig ) {
@@ -24,11 +27,6 @@ if( ! runtimeConfig ) {
 if( ! runtimeConfig.project_list_url_template ) {
     throw 'Config must have project_list_url_template property';
 }
-
-// Once the program exits, timestamp the completion
-process.on( 'exit' , function() {
-    console.log( 'KS2RSS Finished: ' + Date.now() );
-} );
 
 // By default, only show the last 24 hours of projects
 var SEEN_THRESHOLD = ( 24 * 60 * 60 * 1000 );

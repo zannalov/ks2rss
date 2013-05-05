@@ -1,0 +1,9 @@
+{
+    "project_list_base_url": "http://www.kickstarter.com/discover/ending-soon",
+    "project_list_url_template": "http://www.kickstarter.com/discover/ending-soon?page=%%page%%",
+    "projects_db_file": "var/ks2rss.sqlite",
+    "max_fd_concurrency": 512,
+    "item_title_prefix": "Kickstarter (Ending Soon): ",
+    "feed_title": "KS2RSS: Ending Soon",
+    "feed_file": "var/ks2rss6-ending-soon.xml"
+}
