@@ -5,16 +5,17 @@
         // TODO: RSS post details should have blurb, then <hr>, then full content area
 // TODO: PubSubHubbub integration?
 
-// Technically the var calls get hoisted above this line, but this needs to be
-// run first and I still want to use the var x = require syntax
-console.log( 'KS2RSS Started: ' + Date.now() );
-
+var STARTED = Date.now();
 var fetch = require( './lib/fetch' );
 var ch = require('ch').ch;
-var projectsDb = require( './lib/projects' );
+var fs = require('fs');
+var projectDb = require( './lib/projectDb' );
+var projectRss = require( './lib/projectRss' );
 var runtimeConfig = require('configure');
-
 var SEEN_THRESHOLD;
+
+// Note our start time
+console.log( 'KS2RSS Started: ' + STARTED );
 
 // We have to have a config file for the URL format
 if( ! runtimeConfig ) {
@@ -39,8 +40,27 @@ if( runtimeConfig.seen_threshold ) {
 // network calls will conflict
 ch.setMax( runtimeConfig.max_fd_concurrency || 2 );
 
+// Consolidated
+var markSeenAndAccept = function( project , eachProjectLoadedCallback , accepted ) {
+    var seenRow = {
+        url: project.url,
+        seen: project.seen,
+        base: runtimeConfig.project_list_url_template,
+        batch: STARTED
+    };
+
+    // Mark that we saw it
+    projectDb.markProjectSeen( seenRow , function() {
+
+        // And accept the entry because it's not been
+        // seen before
+        eachProjectLoadedCallback( accepted );
+
+    } ); // end markProjectSeen
+};
+
 // Start by opening the DB connection
-projectsDb.openDb( function() {
+projectDb.openDb( function() {
 
     // Then fetch all the pages for the current config
     fetch.fetchAllProjectListPages( {
@@ -50,7 +70,7 @@ projectsDb.openDb( function() {
         eachProjectLoaded: function( project , eachProjectLoadedCallback ) {
 
             // Check if we've seen this project before
-            projectsDb.projectFirstSeen( project , function( firstSeen ) {
+            projectDb.projectFirstSeen( project , function( firstSeen ) {
 
                 // If we've seen it before
                 if( firstSeen ) {
@@ -58,22 +78,15 @@ projectsDb.openDb( function() {
                     // If it was first seen before X time ago
                     if( firstSeen < Date.now() - SEEN_THRESHOLD ) {
 
-                        // Just reject it outright
-                        eachProjectLoadedCallback( false );
+                        markSeenAndAccept( project , eachProjectLoadedCallback , false );
 
                     // It was seen recently enough
                     } else {
 
                         // So fetch the original details
-                        projectsDb.overrideProjectDetails( project , function() {
+                        projectDb.overrideProjectDetails( project , function() {
 
-                            // Mark that we saw it again
-                            projectsDb.markProjectSeen( project , function() {
-
-                                // And accept it for this round
-                                eachProjectLoadedCallback( true );
-
-                            } ); // end markProjectSeen
+                            markSeenAndAccept( project , eachProjectLoadedCallback , true );
 
                         } ); // end overrideProjectDetails
 
@@ -88,16 +101,9 @@ projectsDb.openDb( function() {
                         callback: function() {
 
                             // Store entry
-                            projectsDb.addProjectEntry( project , function() {
+                            projectDb.addProjectEntry( project , function() {
 
-                                // Mark that we saw it
-                                projectsDb.markProjectSeen( project , function() {
-
-                                    // And accept the entry because it's not been
-                                    // seen before
-                                    eachProjectLoadedCallback( true );
-
-                                } ); // end markProjectSeen
+                                markSeenAndAccept( project , eachProjectLoadedCallback , false );
 
                             } );
                         },
@@ -110,8 +116,11 @@ projectsDb.openDb( function() {
         }, // end eachProjectLoaded
 
         allProjectsLoaded: function( projects ) {
-            console.log( 'all projects loaded, kept total = ' + projects.length );
-            projectsDb.closeDb();
+            var xml;
+
+            xml = projectRss.projectsToRssXmlFeed( projects );
+            fs.writeFileSync( runtimeConfig.feed_file , xml );
+            projectDb.closeDb();
         },
 
     } ); // end fetchAllProjectListPages
