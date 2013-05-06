@@ -1,5 +1,3 @@
-// TODO: PubSubHubbub integration?
-
 var STARTED = Date.now();
 var fetch = require( './lib/fetch' );
 var ch = require('ch').ch;
@@ -9,6 +7,7 @@ var projectRss = require( './lib/projectRss' );
 var runtimeConfig = require('configure');
 var SEEN_THRESHOLD;
 var trulyNewProjectCount = 0;
+var pshb = require( './lib/pshb' );
 
 // Note our start and end times
 // console.log( 'KS2RSS Started: ' + STARTED );
@@ -115,8 +114,22 @@ projectDb.openDb( function() {
         allProjectsLoaded: function( projects ) {
             var xml;
 
+            // Generate the XML
             xml = projectRss.projectsToRssXmlFeed( projects );
-            fs.writeFileSync( runtimeConfig.feed_file , xml );
+
+            // Write it to the FS (no need to go async here, we can take our time)
+            fs.writeFileSync( runtimeConfig.feed_file + '.tmp' , xml );
+
+            // Then move the file into place (as fast as we can)
+            fs.renameSync( runtimeConfig.feed_file + '.tmp' , runtimeConfig.feed_file );
+
+            // If we've configured PubSubHubbub, ping it
+            if( trulyNewProjectCount && runtimeConfig.pubsubhubbub_url && runtimeConfig.feed_url ) {
+                pshb.publishUpdates( runtimeConfig.pubsubhubbub_url , runtimeConfig.feed_url );
+            }
+
+            // Don't forget to close this (although it should be cleaned up by
+            // the application exiting, better safe than sorry)
             projectDb.closeDb();
         },
 
