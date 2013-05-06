@@ -5,7 +5,7 @@
     "max_fd_concurrency": 512,
     "item_title_prefix": "Kickstarter (Local): ",
     "feed_title": "KS2RSS: Local",
-    "feed_file": "/var/www/zannalov.com/ks2rss6-indianapolis.xml",
-    "feed_url": "https://www.zannalov.com/ks2rss6-indianapolis.xml",
+    "feed_file": "/var/www/zannalov.com/ks2rss7-indianapolis.xml",
+    "feed_url": "http://www.zannalov.com/ks2rss7-indianapolis.xml",
     "pubsubhubbub_url": "https://pubsubhubbub.appspot.com/"
 }

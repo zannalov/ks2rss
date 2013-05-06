@@ -5,7 +5,7 @@
     "max_fd_concurrency": 512,
     "item_title_prefix": "Kickstarter (New): ",
     "feed_title": "KS2RSS: Recently Launched",
-    "feed_file": "/var/www/zannalov.com/ks2rss6-recently-launched.xml",
-    "feed_url": "https://www.zannalov.com/ks2rss6-recently-launched.xml",
+    "feed_file": "/var/www/zannalov.com/ks2rss7-recently-launched.xml",
+    "feed_url": "http://www.zannalov.com/ks2rss7-recently-launched.xml",
     "pubsubhubbub_url": "https://pubsubhubbub.appspot.com/"
 }
