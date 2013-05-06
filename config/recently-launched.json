@@ -7,5 +7,5 @@
     "feed_title": "KS2RSS: Recently Launched",
     "feed_file": "/var/www/zannalov.com/ks2rss6-recently-launched.xml",
     "feed_url": "https://www.zannalov.com/ks2rss6-recently-launched.xml",
-    "pubsubhubbub_url": "http://pubsubhubbub.appspot.com/"
+    "pubsubhubbub_url": "https://pubsubhubbub.appspot.com/"
 }

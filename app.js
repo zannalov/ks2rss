@@ -125,7 +125,7 @@ projectDb.openDb( function() {
 
             // If we've configured PubSubHubbub, ping it
             if( trulyNewProjectCount && runtimeConfig.pubsubhubbub_url && runtimeConfig.feed_url ) {
-                pshb.publishUpdates( runtimeConfig.pubsubhubbub_url , runtimeConfig.feed_url );
+                pshb.publishUpdates( runtimeConfig.pubsubhubbub_url , runtimeConfig.feed_url , function() {} );
             }
 
             // Don't forget to close this (although it should be cleaned up by
